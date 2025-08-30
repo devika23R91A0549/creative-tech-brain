@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>StudyMate - PDF Q/A</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f9; }
+    h1 { color: #333; }
+    #chat { border: 1px solid #ccc; padding: 10px; background: #fff; height: 400px; overflow-y: scroll; margin-bottom: 10px; }
+    .msg { margin: 8px 0; }
+    .user { color: #0a58ca; font-weight: bold; }
+    .bot { color: #198754; }
+    .error { color: #dc3545; font-style: italic; }
+    input, button { padding: 8px; margin: 4px; }
+    #uploadSection { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>📘 StudyMate - AI PDF Q/A</h1>
+  
+  <div id="uploadSection">
+    <label>Upload PDF: </label>
+    <input type="file" id="pdfFile" accept="application/pdf">
+    <button onclick="uploadPDF()">Upload</button>
+  </div>
+  
+  <div id="chat"></div>
+  
+  <input type="text" id="question" placeholder="Ask a question..." size="60">
+  <button onclick="askQuestion()">Ask</button>
+  
+  <script>
+    let pdfText = "";
+
+    // Upload PDF to backend
+    async function uploadPDF() {
+      const fileInput = document.getElementById("pdfFile");
+      if (!fileInput.files.length) {
+        alert("Please choose a PDF first!");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      const res = await fetch("http://127.0.0.1:5000/api/upload_pdf", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await res.json();
+      if (data.text) {
+        pdfText = data.text;
+        alert("✅ PDF uploaded and processed successfully!");
+      } else {
+        alert("❌ Failed to process PDF.");
+      }
+    }
+
+    // Ask question to backend
+    async function askQuestion() {
+      const questionBox = document.getElementById("question");
+      const chat = document.getElementById("chat");
+      const question = questionBox.value.trim();
+      if (!question) return;
+
+      // Show user message
+      chat.innerHTML += `<div class="msg user">You: ${question}</div>`;
+      questionBox.value = "";
+
+      try {
+        const res = await fetch("http://127.0.0.1:5000/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: question })
+        });
+
+        const data = await res.json();
+        if (data.answer) {
+          chat.innerHTML += `<div class="msg bot">Bot: ${data.answer}</div>`;
+        } else {
+          chat.innerHTML += `<div class="msg error">Bot: Sorry, I couldn't find an answer.</div>`;
+        }
+      } catch (err) {
+        chat.innerHTML += `<div class="msg error">Error: ${err.message}</div>`;
+      }
+
+      chat.scrollTop = chat.scrollHeight; // Auto-scroll
+    }
+  </script>
+</body>
+</html>
